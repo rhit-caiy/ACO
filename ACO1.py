@@ -1,6 +1,7 @@
 from random import randint
 from tkinter import Tk,Canvas
 from time import sleep
+from itertools import permutations
 
 window=Tk()
 canvas=Canvas(window,bg="#FFFFFF",width=1440,height=810)
@@ -41,7 +42,7 @@ def draw(points,paths,ant,minp):
         # maxv=max(paths[i])
         for j in range(n):
             if i>j:
-                maxinformation=max(max(paths[i]),max(paths[j]))
+                maxinformation=max(max(paths[i]),max(paths[j]),1)
                 canvas.create_line(points[i][0],points[i][1],points[j][0],points[j][1],fill=densitycolor(paths[i][j],maxinformation))
             # if paths[i][j]==maxv:
             #     canvas.create_line(points[i][0],points[i][1],points[j][0],points[j][1],fill="#000000")
@@ -58,8 +59,18 @@ def draw(points,paths,ant,minp):
         x,y=x1,y1
     canvas.update()
 
+def pathlength(path,distances):
+    total=0
+    for i in range(len(path)-1):
+        total+=distances[path[i]][path[i+1]]
+    return total
+
 def start():
-    #global n
+    print()
+    permutationnum=5
+    
+    
+    
     mind=n*1000
     minp=[]
     points=[]
@@ -82,9 +93,64 @@ def start():
         for j in range(n):
             distances[i][j]=((points[i][0]-points[j][0])**2+(points[i][1]-points[j][1])**2)**0.5
     #print(distances)
-    
     paths=[[0 for i in range(n)] for i in range(n)]
     
+    
+    #use local optimize
+    minp=[i for i in range(n)]+[0]
+    mind=pathlength(minp,distances)
+    while 1:
+        newlen=mind
+        newminp=[]
+        for i in range(1,n):
+            for j in range(1,n):
+                if i<j:
+                    newp=minp.copy()
+                    newp[i:j+1]=newp[i:j+1][::-1]
+                    if (l:=pathlength(newp,distances))<newlen:
+                        newlen=l
+                        newminp=newp.copy()
+        for i in range(1,n):
+            for j in range(1,n):
+                if i<j:
+                    newp=minp.copy()
+                    newp[i],newp[j]=newp[j],newp[i]
+                    if (l:=pathlength(newp,distances))<newlen:
+                        newlen=l
+                        newminp=newp.copy()
+        for i in range(1,n-permutationnum):
+            newp=minp.copy()
+            for p in permutations(newp[i:i+permutationnum]):
+                newp=newp[:i]+list(p)+newp[i+permutationnum:]
+                if (l:=pathlength(newp,distances))<newlen:
+                    newlen=l
+                    newminp=newp.copy()
+        for i in range(1,n):
+            newp=minp.copy()
+            pointvalue=newp[i]
+            newp.remove(pointvalue)
+            for j in range(1,n-1):
+                newp.insert(j,pointvalue)
+                if (l:=pathlength(newp,distances))<newlen:
+                    newlen=l
+                    newminp=newp.copy()
+                newp.remove(pointvalue)
+        if newlen<mind:
+            minp=newminp.copy()
+            mind=newlen
+            #print(newminp,newlen)
+        elif newlen==mind:
+            print("end")
+            break
+        draw(points,paths,antnum,minp)
+        canvas.create_text(1300,50,text=str(mind))
+        canvas.update()
+    print("minimum length",mind)
+    sleep(1)
+    
+    mind=n*1000
+    minp=[]
+    #ACO
     for ant in range(antnum):
         d=0
         p=[0]
@@ -122,8 +188,63 @@ def start():
             minp=p
         if ant%10==0:
             draw(points,paths,ant,minp)
-            print(ant,mind,max([max(i) for i in paths]))
-            sleep(0.01)
+            canvas.create_text(1300,50,text=str(mind))
+            canvas.update()
+            #print(ant,mind,max([max(i) for i in paths]))
+            #sleep(0.01)
+    print("ACO minimum result",mind)
+    
+    sleep(1)
+    #ACO then local optimize
+    mind=pathlength(minp,distances)
+    while 1:
+        newlen=mind
+        newminp=[]
+        for i in range(1,n):
+            for j in range(1,n):
+                if i<j:
+                    newp=minp.copy()
+                    newp[i:j+1]=newp[i:j+1][::-1]
+                    if (l:=pathlength(newp,distances))<newlen:
+                        newlen=l
+                        newminp=newp.copy()
+        for i in range(1,n):
+            for j in range(1,n):
+                if i<j:
+                    newp=minp.copy()
+                    newp[i],newp[j]=newp[j],newp[i]
+                    if (l:=pathlength(newp,distances))<newlen:
+                        newlen=l
+                        newminp=newp.copy()
+        for i in range(1,n-permutationnum):
+            newp=minp.copy()
+            for p in permutations(newp[i:i+permutationnum]):
+                newp=newp[:i]+list(p)+newp[i+permutationnum:]
+                if (l:=pathlength(newp,distances))<newlen:
+                    newlen=l
+                    newminp=newp.copy()
+        for i in range(1,n):
+            newp=minp.copy()
+            pointvalue=newp[i]
+            newp.remove(pointvalue)
+            for j in range(1,n-1):
+                newp.insert(j,pointvalue)
+                if (l:=pathlength(newp,distances))<newlen:
+                    newlen=l
+                    newminp=newp.copy()
+                newp.remove(pointvalue)
+        if newlen<mind:
+            minp=newminp.copy()
+            mind=newlen
+            #print(newminp,newlen)
+        elif newlen==mind:
+            print("end")
+            break
+        draw(points,paths,antnum,minp)
+        canvas.create_text(1300,50,text=str(mind))
+        canvas.update()
+    print("mix minimum result",mind)
+        
 def click(coordinate):
     start()
 canvas.bind("<Button-1>",click)
