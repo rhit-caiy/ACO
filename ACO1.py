@@ -6,8 +6,8 @@ window=Tk()
 canvas=Canvas(window,bg="#FFFFFF",width=1440,height=810)
 window.title("ACO")
 
-n=64
-antnum=1000
+n=32
+antnum=10000
 
 def getrandomindex(availablepoints,information):
     weights=[]
@@ -32,11 +32,11 @@ def densitycolor(v,maxvalue):
     color="#"+colorvalue*3
     return color
     
-def draw(points,paths,ant):
+def draw(points,paths,ant,minp):
     canvas.delete("all")
     # maxinformation=max([max(i) for i in paths])
-    canvas.create_line(0,10,ant,10)
-    canvas.create_line(antnum,0,antnum,20)
+    canvas.create_line(0,10,ant/10,10)
+    canvas.create_line(antnum/10,0,antnum/10,20)
     for i in range(n):
         # maxv=max(paths[i])
         for j in range(n):
@@ -50,19 +50,32 @@ def draw(points,paths,ant):
             canvas.create_oval(point[0]-4,point[1]-4,point[0]+4,point[1]+4,fill="#FF0000")
         else:
             canvas.create_oval(point[0]-4,point[1]-4,point[0]+4,point[1]+4,fill="#000000")
+    x,y=points[0]
+    for pointn in minp:
+        point=points[pointn]
+        x1,y1=point
+        canvas.create_line(x,y,x1,y1,fill="#FF0000")
+        x,y=x1,y1
     canvas.update()
 
 def start():
-    global n
+    #global n
+    mind=n*1000
+    minp=[]
     points=[]
     for i in range(n):
         #avoid too close
-        
-        x,y=(randint(100,1400),randint(50,700))
-        
+        while 1:
+            x,y=(randint(50,1400),randint(50,750))
+            num=0
+            for p in points:
+                if ((x-p[0])**2+(y-p[1])**2)**0.5<1000/n:
+                    num+=1
+            if num==0:
+                break
         points.append((x,y))
     
-    n=len(points)
+    #n=len(points)
     distances=[[0 for i in range(n)] for i in range(n)]
     
     for i in range(n):
@@ -73,6 +86,8 @@ def start():
     paths=[[0 for i in range(n)] for i in range(n)]
     
     for ant in range(antnum):
+        d=0
+        p=[0]
         availablepoints=[i for i in range(1,n)]
         currentpoint=0
         #print(currentpoint,end="")
@@ -81,11 +96,15 @@ def start():
             #print("returnvalue",i)
             nextpoint=i
             availablepoints.remove(i)
-            paths[currentpoint][nextpoint]+=(100/distances[currentpoint][nextpoint])#add information
+            paths[currentpoint][nextpoint]+=(100*n/distances[currentpoint][nextpoint])#add information
+            d+=distances[currentpoint][nextpoint]
+            p.append(nextpoint)
             currentpoint=nextpoint
             #print(" ->",currentpoint,end="")
         else:
-            paths[currentpoint][0]+=100/distances[currentpoint][0]
+            paths[currentpoint][0]+=100*n/distances[currentpoint][0]
+            d+=distances[currentpoint][0]
+            p.append(0)
             #print("-> 0")
         for i in range(n):
             for j in range(n):
@@ -98,9 +117,12 @@ def start():
         #         newpaths[i][j]=paths[i][j]*100/s#reduce
         # paths=newpaths
         # print(maxinformation)
+        if d<mind:
+            mind=d
+            minp=p
         if ant%10==0:
-            draw(points,paths,ant)
-            print(ant,max([max(i) for i in paths]))
+            draw(points,paths,ant,minp)
+            print(ant,mind,max([max(i) for i in paths]))
             sleep(0.01)
 def click(coordinate):
     start()
