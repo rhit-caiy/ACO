@@ -1,22 +1,23 @@
 from random import randint
 from tkinter import Tk,Canvas
-from time import sleep
+from time import sleep,time
+
+import matplotlib.pyplot as plt
 
 window=Tk()
 canvas=Canvas(window,bg="#FFFFFF",width=1440,height=810)
 window.title("ACO")
 
 n=64#vertex number
-antnum=100#number of ants in one generation, update pheromone every antnum ants
-generationnum=100#total ant generation number
-initialPheromone=100#initial value should greater than 0 for random
-rou=0.1#pheromone decrease every generation
-q=1000#amount of pheromone one ant have
-#used for probability adjustment
+antnum=n#number of ants in one generation, update pheromone every antnum ants
+generationnum=n*2#total ant generation number
+rou=1/n#pheromone decrease every generation
+q=n#amount of pheromone one ant have
+initialPheromone=antnum*q/n/(n-1)#initial concertration on paths, should >0 for random
 #pheromone attractivity
 alpha=1
 #distance attractivity
-beta=6
+beta=5
 
 def pheromonecolor(v,maxvalue):
     value=int((1-v/maxvalue)*255)
@@ -27,14 +28,14 @@ def pheromonecolor(v,maxvalue):
 
 def updatetext(g,k,bestdistance):
     canvas.delete("text")
-    canvas.create_text(400,20,text="generation "+str(g)+"/"+str(generationnum)+"    ant "+str(k)+"/"+str(antnum)+"    "+"min distance "+str(bestdistance),tag="text")
+    canvas.create_text(400,20,text="generation "+str(g+1)+"/"+str(generationnum)+"    ant "+str(k+1)+"/"+str(antnum)+"    "+"min distance "+str(bestdistance),tag="text")
     canvas.update()
     return
 
 def draw(v,tau,bestpath,bestdistance,g):
-    
     maxpheromone=max([max(i) for i in tau])#max(200,max([max(i) for i in tau]))
-    print("max pheromone concertration",maxpheromone)
+    minpheromone=min([min(i) for i in tau])
+    print("pheromone concertration range",round(maxpheromone,6),round(minpheromone,6))
     
     canvas.delete("all")
     for i in range(n):
@@ -47,7 +48,7 @@ def draw(v,tau,bestpath,bestdistance,g):
         canvas.create_text(vertex[0],vertex[1]-10,text=str(i))
     canvas.create_oval(v[0][0]-4,v[0][1]-4,v[0][0]+4,v[0][1]+4,fill="#FF0000")
     canvas.update()
-    updatetext(g,antnum,bestdistance)
+    updatetext(g,antnum-1,bestdistance)
     color="#FF0000"
     sleep(0.1)
     for i in range(n):
@@ -71,7 +72,7 @@ def nextmove(available,v0,vtau,veta):
         return l[-1]
     
 def start():
-    global tau
+    tstart=time()
     v=[]#vertices, first one would be the ant net
     
     for i in range(n):
@@ -101,7 +102,10 @@ def start():
     
     bestdistance=n*10000
     bestpath=[]
+    generationbestdistances=[]
+    bestdistances=[]
     for g in range(generationnum):
+        t=time()
         tauupdate=[[0 for i in range(n)] for j in range(n)]#update at the end of ant generation, track the total number
         generationbestdistance=n*10000
         generationbestpath=[]
@@ -130,19 +134,28 @@ def start():
             for j in range(n):
                 if i>j:
                     tau[i][j]=tau[j][i]=(1-rou)*tau[i][j]+tauupdate[i][j]+tauupdate[j][i]
-        print("generation",g," generation best",generationbestdistance)
+            tau[i][i]=0
+            tau[i][i]=sum(tau[i])/(n-1)#remove diagonal
+        print("generation",g," generation best",round(generationbestdistance,6),"time",round(time()-t,6),"s")
+        generationbestdistances.append(generationbestdistance)
         if generationbestdistance<bestdistance:
             bestdistance=generationbestdistance
             bestpath=generationbestpath
+        bestdistances.append(bestdistance)
         draw(v,tau,bestpath,bestdistance,g)
         
-            
-    
     print(bestdistance,bestpath)
-
+    print("total time",round(time()-tstart,6),"s")
+    plt.plot(generationbestdistances,"")
+    plt.plot(bestdistances,"r")
+    plt.ylabel("distance")
+    plt.xlabel("generation")
+    plt.grid()
+    plt.show()
 
 def click(coordinate):
     start()
+    
 canvas.bind("<Button-1>",click)
 canvas.pack()
 window.mainloop()
