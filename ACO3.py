@@ -22,6 +22,12 @@ def pathdistance(path):
         d+=e[path[i]][path[i+1]]
     return d
 
+def validpath(path):
+    if sorted(path)==[0]+[i for i in range(n)]:
+        print(True)
+    else:
+        print(False)
+
 def weightedrandom(weights,num):
     mul=10000/min(weights)#let minimum weight to be 10000
     newweights=[i*mul for i in weights]
@@ -58,7 +64,6 @@ def randomedge(n,dimension,ranges,interval):
             if num==0:
                 break
         v.append(tuple(coordinate))
-    # v=[(267, 364), (78, 521), (428, 206), (1399, 118), (204, 689), (1322, 488), (396, 349), (1154, 609)]
     print(v)
     e=[[0 for i in range(n)] for j in range(n)]#edges
     for i in range(n):
@@ -75,8 +80,57 @@ availablelist=[i for i in range(1,n)]
 def ACO(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
     times=[]
     bestpath=[]
-    bestdistance=0
-    return bestpath,bestdistance,times
+    maxdistance=sum((max(i) for i in e))
+    bestdistance=maxdistance
+    historydistance=[]
+    tau=[[initialPheromone for i in range(n)] for j in range(n)]#pheromone
+    eta=[[0 for i in range(n)] for j in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if i!=j:
+                eta[i][j]=1/e[i][j]#1/d
+    tstart=time()
+    for g in range(generationnum):
+        t=time()
+        tauupdate=[[0 for i in range(n)] for j in range(n)]#update at the end of ant generation, track the total number
+        generationbestdistance=maxdistance
+        generationbestpath=[]
+        for k in range(antnum):
+            d=0
+            path=[0]
+            available=availablelist.copy()
+            v0=0
+            for i in range(n-1):
+                p=[(tau[v0][i]**alpha*eta[v0][i]**beta) for i in available]
+                v1=available[weightedrandom(p,1)[0]]
+                available.remove(v1)
+                path.append(v1)
+                d+=e[v0][v1]
+                v0=v1
+            path.append(0)
+            d+=e[v0][0]
+            for i in range(n):
+                tauupdate[path[i]][path[i+1]]+=q/d
+            if d<generationbestdistance:
+                generationbestdistance=d
+                generationbestpath=path
+        #update pheromone
+        for i in range(n):
+            for j in range(n):
+                if i>j:
+                    tau[i][j]=tau[j][i]=(1-rou)*tau[i][j]+tauupdate[i][j]+tauupdate[j][i]
+            tau[i][i]=0
+            tau[i][i]=sum(tau[i])/(n-1)#remove diagonal
+        historydistance.append(generationbestdistance)
+        if generationbestdistance<bestdistance:
+            bestdistance=generationbestdistance
+            bestpath=generationbestpath
+        times.append(time()-t)
+        if g%100==0:
+            print(g,bestdistance)
+    
+    totaltime=time()-tstart
+    return bestpath,bestdistance,totaltime,times,historydistance
 
 #can be treated as brute force
 def random(v,e,num):
@@ -103,10 +157,100 @@ def random(v,e,num):
     return bestpath,bestdistance,totaltime,times,historydistance
 
 def twoopt(v,e,num):
-    return
+    times=[]
+    bestpath=[]
+    bestdistance=sum((max(i) for i in e))
+    historydistance=[]
+    tstart=time()
+    for g in range(num):
+        t0=time()
+        path=availablelist.copy()
+        shuffle(path)
+        path.append(0)
+        path.insert(0,0)
+        d=pathdistance(path)
+        while 1:
+            reduced=0
+            for i in range(n-2):
+                for j in range(2,n):
+                    if j-i>1:
+                        d0=e[path[i]][path[i+1]]+e[path[j]][path[j+1]]
+                        d1=e[path[i]][path[j]]+e[path[i+1]][path[j+1]]
+                        if d1<d0:
+                            path=path[:i+1]+path[i+1:j+1][::-1]+path[j+1:]
+                            d=pathdistance(path)
+                            reduced=1
+                            break
+                if reduced:
+                    break
+                            
+            if not reduced:
+                break
+        
+        if d<bestdistance:
+            bestdistance=d
+            bestpath=path
+        historydistance.append(d)
+        # print(d)
+        
+        t1=time()
+        times.append(t1-t0)
+    totaltime=time()-tstart
+    validpath(bestpath)
+    return bestpath,bestdistance,totaltime,times,historydistance
 
-def threeopt(v,e):
-    return
+def threeopt(v,e,num):
+    times=[]
+    bestpath=[]
+    bestdistance=sum((max(i) for i in e))
+    historydistance=[]
+    tstart=time()
+    for g in range(num):
+        t0=time()
+        path=availablelist.copy()
+        shuffle(path)
+        path.append(0)
+        path.insert(0,0)
+        d=pathdistance(path)
+        while 1:
+            reduced=0
+            for i in range(n-4):
+                for j in range(2,n-2):
+                    for k in range(4,n):
+                        if j-i>1 and k-j>1:
+                            d0=e[path[i]][path[i+1]]+e[path[j]][path[j+1]]+e[path[k]][path[k+1]]
+                            d1=e[path[i]][path[j+1]]+e[path[j]][path[k+1]]+e[path[k]][path[i+1]]
+                            d2=e[path[i]][path[k]]+e[path[i+1]][path[j+1]]+e[path[j]][path[k+1]]
+                            if d1<d0:
+                                path=path[:i+1]+path[j+1:k+1]+path[i+1:j+1]+path[k+1:]
+                                d=pathdistance(path)
+                                reduced=1
+                                break
+                            elif d2<d0:
+                                path=path[:i+1]+path[j+1:k+1][::-1]+path[i+1:j+1]+path[k+1:]
+                                d=pathdistance(path)
+                                reduced=1
+                                break
+                            
+                    if reduced:
+                        break
+                if reduced:
+                    break
+                            
+            if not reduced:
+                break
+        
+        if d<bestdistance:
+            bestdistance=d
+            bestpath=path
+        historydistance.append(d)
+        # print(g,d)
+        
+        t1=time()
+        times.append(t1-t0)
+    totaltime=time()-tstart
+    validpath(bestpath)
+    return bestpath,bestdistance,totaltime,times,historydistance
 
 
 def greedy(v,e):
@@ -246,10 +390,9 @@ def astar(v,e):
     return
 
 #genetic algorithm, unable to cross chromosomes, just mutation and selection
-def geneticalgorithm(v,e,chromosomenum,generation,mutaterate):
+def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
     chromosomes=[]
     lengths=[]
-    mutatenum=int(mutaterate*n)
     for i in range(chromosomenum):
         chromosome=availablelist.copy()
         shuffle(chromosome)
@@ -264,17 +407,16 @@ def geneticalgorithm(v,e,chromosomenum,generation,mutaterate):
     tstart=time()
     for g in range(generation):
         #selection
-        # print("generation",g)
-        if g%100==0:
-            print(g,bestdistance)
-        nextgenerationindex=weightedrandom([(bestdistance/i)**64 for i in lengths],chromosomenum)
-        chromosomes=[chromosomes[i] for i in nextgenerationindex]
+        
+        #index 0 is reserved for best
+        bestc=chromosomes[lengths.index(min(lengths))]
+        nextgenerationindex=weightedrandom([(bestdistance/i)**selection for i in lengths],chromosomenum-1)
+        chromosomes=[bestc]+[chromosomes[i] for i in nextgenerationindex]
         #mutation, change 2 edge currently
-        for c in range(chromosomenum):
-            #for a in range(mutatenum):
-            i,j,k=sorted((randint(1,n),randint(1,n),randint(1,n)))
-            #chromosomes[c][i],chromosomes[c][j]=chromosomes[c][j],chromosomes[c][i]
-            chromosomes[c]=chromosomes[c][:i]+chromosomes[c][j:k]+chromosomes[c][i:j]+chromosomes[c][k:]       
+        for c in range(1,chromosomenum):
+            for a in range(mutatenum):
+                i,j,k=sorted((randint(1,n),randint(1,n),randint(1,n)))
+                chromosomes[c]=chromosomes[c][:i]+chromosomes[c][j:k]+chromosomes[c][i:j]+chromosomes[c][k:]       
             
         lengths=[pathdistance(c) for c in chromosomes]
         if min(lengths)<bestdistance:
@@ -283,17 +425,21 @@ def geneticalgorithm(v,e,chromosomenum,generation,mutaterate):
         # print(min(lengths))
         historydistance.append(min(lengths))
         # print(chromosomes)
+        # if g%100==0:
+        #     print(g,bestdistance)
         
     totaltime=time()-tstart
     # print(bestdistance,lengths)
     return bestpath,bestdistance,totaltime,times,historydistance
 
-# greedyresult=greedy(v,e)
-# print(greedyresult[1],pathdistance(greedyresult[0]))
-# print(random(v,e,1000000)[1])
 
-print(random(v,e,10000)[1])
-print(greedy(v,e)[1])
-print(Prim(v,e)[1])
-print(Kruskal(v,e)[1])
-print(geneticalgorithm(v,e,1000,1000,0.1)[1])
+# print(random(v,e,10000)[1])
+print(twoopt(v,e,100)[1])
+print(threeopt(v,e,10)[1])
+# print(greedy(v,e)[1])
+# print(Prim(v,e)[1])
+# print(Kruskal(v,e)[1])
+# print(geneticalgorithm(v,e,1000,1000,1,64)[1])
+# print()
+print(ACO(v,e,antnum,1000,rou,q,initialPheromone,alpha,beta)[1])
+
