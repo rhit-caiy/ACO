@@ -1,8 +1,7 @@
 from random import randint,shuffle
-# from tkinter import Tk,Canvas
-from time import sleep,time
+from time import time
 
-n=64#vertex number
+n=100#vertex number
 antnum=n#number of ants in one generation, update pheromone every antnum ants
 generationnum=n*2#total ant generation number
 rou=1/n#pheromone decrease every generation
@@ -11,7 +10,7 @@ initialPheromone=antnum*q/n/(n-1)#initial concertration on paths, should >0 for 
 #pheromone attractivity
 alpha=1
 #distance attractivity
-beta=5
+beta=7
 
 def distance(a,b):
     return sum([(a[i]-b[i])**2 for i in range(len(a))])**0.5
@@ -47,14 +46,14 @@ def weightedrandom(weights,num):
     return result
         
 
-#input: number of vertex, dimension, range in those dimension as 2D array, minimum interval
-def randomedge(n,dimension,ranges,interval):
-    global v,e
+#input: number of vertex, range in those dimension as 2D array, minimum interval
+def randomedge(n,ranges,interval):
+    global v,e,availablelist
     v=[]#vertices, first one would be the ant net
     for i in range(n):
         while 1:
             coordinate=[]
-            for i in range(dimension):
+            for i in range(len(ranges)):
                 coordinate.append(randint(ranges[i][0],ranges[i][1]))
             num=0
             for vertex in v:
@@ -69,14 +68,11 @@ def randomedge(n,dimension,ranges,interval):
     for i in range(n):
         for j in range(n):
             e[i][j]=((v[i][0]-v[j][0])**2+(v[i][1]-v[j][1])**2)**0.5
+    availablelist=[i for i in range(1,n)]
+randomedge(n,[[0,1000],[0,1000]],10)
 
-randomedge(n,2,[[50,1400],[50,750]],10)
-
-
-
-availablelist=[i for i in range(1,n)]
 #returns: best path, corresponding distance, totaltime, time for each round, solution of each round
-
+#O(n^2*antnum*generationnum)
 def ACO(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
     times=[]
     bestpath=[]
@@ -126,13 +122,14 @@ def ACO(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
             bestdistance=generationbestdistance
             bestpath=generationbestpath
         times.append(time()-t)
-        if g%100==0:
-            print(g,bestdistance)
+        # if g%100==0:
+        #     print(g,bestdistance)
     
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
 
 #can be treated as brute force
+#O(num*n)
 def random(v,e,num):
     times=[]
     bestpath=[]
@@ -156,6 +153,7 @@ def random(v,e,num):
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
 
+#O(num*n^2)
 def twoopt(v,e,num):
     times=[]
     bestpath=[]
@@ -196,9 +194,9 @@ def twoopt(v,e,num):
         t1=time()
         times.append(t1-t0)
     totaltime=time()-tstart
-    validpath(bestpath)
     return bestpath,bestdistance,totaltime,times,historydistance
 
+#O(num*n^3)
 def threeopt(v,e,num):
     times=[]
     bestpath=[]
@@ -249,7 +247,6 @@ def threeopt(v,e,num):
         t1=time()
         times.append(t1-t0)
     totaltime=time()-tstart
-    validpath(bestpath)
     return bestpath,bestdistance,totaltime,times,historydistance
 
 
@@ -386,10 +383,8 @@ def Kruskal(v,e):
     totaltime=time()-tstart
     return path,d,totaltime,[totaltime],[d]
 
-def astar(v,e):
-    return
-
 #genetic algorithm, unable to cross chromosomes, just mutation and selection
+#O(n*generationnum*chromosomenum)
 def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
     chromosomes=[]
     lengths=[]
@@ -407,7 +402,6 @@ def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
     tstart=time()
     for g in range(generation):
         #selection
-        
         #index 0 is reserved for best
         bestc=chromosomes[lengths.index(min(lengths))]
         nextgenerationindex=weightedrandom([(bestdistance/i)**selection for i in lengths],chromosomenum-1)
@@ -432,14 +426,107 @@ def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
     # print(bestdistance,lengths)
     return bestpath,bestdistance,totaltime,times,historydistance
 
-
+'''
 # print(random(v,e,10000)[1])
-print(twoopt(v,e,100)[1])
-print(threeopt(v,e,10)[1])
+print(twoopt(v,e,10)[1])
+print(threeopt(v,e,2)[1])
 # print(greedy(v,e)[1])
 # print(Prim(v,e)[1])
 # print(Kruskal(v,e)[1])
 # print(geneticalgorithm(v,e,1000,1000,1,64)[1])
 # print()
-print(ACO(v,e,antnum,1000,rou,q,initialPheromone,alpha,beta)[1])
+print(ACO(v,e,antnum,100,rou,q,initialPheromone,alpha,beta)[1])
+'''
 
+
+# print("brute force")
+# print(random(v,e,int(1000000/n))[1])
+# print("greedy")
+# print(greedy(v,e)[1])
+# print("Prim")
+# print(Prim(v,e)[1])
+# print("Kruskal")
+# print(Kruskal(v,e)[1])
+
+# print("2-opt")
+# print(twoopt(v,e,int(10000/n))[1])
+# print("3-opt")
+# print(threeopt(v,e,int(500/n))[1])
+# print("GA")
+# print(geneticalgorithm(v,e,int(100000/n),n*10,1,64)[1])
+
+
+# print("ACO")
+# acoresults=[[0 for i in range(10)] for i in range(10)]
+# for i in range(2):
+#     for alpha in range(1,4):
+#         for beta in range(1,8):
+#             ACOresult=ACO(v,e,n,generationnum,rou,q,initialPheromone,alpha,beta)
+#             print(i,alpha,beta,ACOresult[1])
+#             acoresults[alpha][beta]+=ACOresult[1]
+# for b in range(1,8):
+#     for a in range(1,4):
+#         print("{:<8d}".format(int(acoresults[a][b])),end="")
+#     print()
+    
+'''
+t1=time()
+n=100
+print(n)
+randomedge(n,2,[[0,1000],[0,1000]],10)
+ACO(v,e,10,10,0.1,10,1,1,1)
+t2=time()
+n=200
+print(n)
+randomedge(n,2,[[0,1000],[0,1000]],10)
+ACO(v,e,10,10,0.1,10,1,1,1)
+t3=time()
+n=400
+print(n)
+randomedge(n,2,[[0,1000],[0,1000]],10)
+ACO(v,e,10,10,0.1,10,1,1,1)
+t4=time()
+print(t2-t1,t3-t2,t4-t3)
+
+'''
+results=[]
+strings=["brute force", "greedy", "Prim", "Kruskal", "2-opt", "3-opt", "Genetic algorithm", "ACO"]
+print(strings[0])
+results.append(random(v,e,600000))
+print(results[0][1],results[0][2],"s")
+print(strings[1])
+results.append(greedy(v,e))
+print(results[1][1],results[1][2],"s")
+print(strings[2])
+results.append(Prim(v,e))
+print(results[2][1],results[2][2],"s")
+print(strings[3])
+results.append(Kruskal(v,e))
+print(results[3][1],results[3][2],"s")
+print(strings[4])
+results.append(twoopt(v,e,int(12000/n)))
+print(results[4][1],results[4][2],"s")
+print(strings[5])
+results.append(threeopt(v,e,int(20000/n**2)))
+print(results[5][1],results[5][2],"s")
+print(strings[6])
+results.append(geneticalgorithm(v,e,1000,500,1,64))
+print(results[6][1],results[6][2],"s")
+print(strings[7])
+results.append(ACO(v,e,int(5000/n),200,rou,q,initialPheromone,alpha,beta))
+print(results[7][1],results[7][2],"s")
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+#brute force, greedy, Prim, Kruskal, 2-opt, 3-opt, Genetic algorithm, ACO
+fig, axs = plt.subplots(nrows=3, ncols=3, constrained_layout=True)
+for i in range(3):
+    for j in range(3):
+        plt.subplot(3,3,3*i+j+1)
+        plt.scatter(np.array([vx[0] for vx in v]),np.array([vy[1] for vy in v]),s=2,c='#000000')
+        if i==2 and j==2:
+            break
+        plt.plot(np.array([v[vx][0] for vx in results[3*i+j][0]]),np.array([v[vy][1] for vy in results[3*i+j][0]]))
+        plt.title(strings[3*i+j])
+        plt.text(0,1050,str(round(results[3*i+j][1],6)))
