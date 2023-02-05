@@ -1,16 +1,7 @@
 from random import randint,shuffle
 from time import time
 
-n=100#vertex number
-antnum=n#number of ants in one generation, update pheromone every antnum ants
-generationnum=n*2#total ant generation number
-rou=1/n#pheromone decrease every generation
-q=n#amount of pheromone one ant have
-initialPheromone=antnum*q/n/(n-1)#initial concertration on paths, should >0 for random
-#pheromone attractivity
-alpha=1
-#distance attractivity
-beta=7
+
 
 def distance(a,b):
     return sum([(a[i]-b[i])**2 for i in range(len(a))])**0.5
@@ -67,9 +58,8 @@ def randomedge(n,ranges,interval):
     e=[[0 for i in range(n)] for j in range(n)]#edges
     for i in range(n):
         for j in range(n):
-            e[i][j]=((v[i][0]-v[j][0])**2+(v[i][1]-v[j][1])**2)**0.5
+            e[i][j]=sum([(v[i][d]-v[j][d])**2 for d in range(len(ranges))])**0.5
     availablelist=[i for i in range(1,n)]
-randomedge(n,[[0,1000],[0,1000]],10)
 
 #returns: best path, corresponding distance, totaltime, time for each round, solution of each round
 #O(n^2*antnum*generationnum)
@@ -87,7 +77,7 @@ def ACO(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
                 eta[i][j]=1/e[i][j]#1/d
     tstart=time()
     for g in range(generationnum):
-        t=time()
+        # t=time()
         tauupdate=[[0 for i in range(n)] for j in range(n)]#update at the end of ant generation, track the total number
         generationbestdistance=maxdistance
         generationbestpath=[]
@@ -121,7 +111,7 @@ def ACO(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
         if generationbestdistance<bestdistance:
             bestdistance=generationbestdistance
             bestpath=generationbestpath
-        times.append(time()-t)
+        times.append(time()-tstart)
         # if g%100==0:
         #     print(g,bestdistance)
     
@@ -137,7 +127,7 @@ def random(v,e,num):
     historydistance=[]
     tstart=time()
     for i in range(num):
-        t0=time()
+        # t0=time()
         path=availablelist.copy()
         shuffle(path)
         path.append(0)
@@ -148,8 +138,8 @@ def random(v,e,num):
             bestpath=path
         historydistance.append(d)
         
-        t1=time()
-        times.append(t1-t0)
+        # t1=time()
+        times.append(time()-tstart)
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
 
@@ -161,7 +151,7 @@ def twoopt(v,e,num):
     historydistance=[]
     tstart=time()
     for g in range(num):
-        t0=time()
+        # t0=time()
         path=availablelist.copy()
         shuffle(path)
         path.append(0)
@@ -191,8 +181,8 @@ def twoopt(v,e,num):
         historydistance.append(d)
         # print(d)
         
-        t1=time()
-        times.append(t1-t0)
+        # t1=time()
+        times.append(time()-tstart)
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
 
@@ -204,7 +194,7 @@ def threeopt(v,e,num):
     historydistance=[]
     tstart=time()
     for g in range(num):
-        t0=time()
+        # t0=time()
         path=availablelist.copy()
         shuffle(path)
         path.append(0)
@@ -244,8 +234,8 @@ def threeopt(v,e,num):
         historydistance.append(d)
         # print(g,d)
         
-        t1=time()
-        times.append(t1-t0)
+        # t1=time()
+        times.append(time()-tstart)
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
 
@@ -384,7 +374,7 @@ def Kruskal(v,e):
     return path,d,totaltime,[totaltime],[d]
 
 #genetic algorithm, unable to cross chromosomes, just mutation and selection
-#O(n*generationnum*chromosomenum)
+#O(generationnum*chromosomenum)
 def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
     chromosomes=[]
     lengths=[]
@@ -401,6 +391,7 @@ def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
     historydistance=[]
     tstart=time()
     for g in range(generation):
+        # t0=time()
         #selection
         #index 0 is reserved for best
         bestc=chromosomes[lengths.index(min(lengths))]
@@ -421,11 +412,25 @@ def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
         # print(chromosomes)
         # if g%100==0:
         #     print(g,bestdistance)
+        times.append(time()-tstart)
         
     totaltime=time()-tstart
     # print(bestdistance,lengths)
     return bestpath,bestdistance,totaltime,times,historydistance
 
+
+n=128#vertex number
+antnum=n#number of ants in one generation, update pheromone every antnum ants
+generationnum=n*2#total ant generation number
+rou=1/n#pheromone decrease every generation
+q=n#amount of pheromone one ant have
+initialPheromone=antnum*q/n/(n-1)#initial concertration on paths, should >0 for random
+#pheromone attractivity
+alpha=1
+#distance attractivity
+beta=6
+
+randomedge(n,[[0,1000],[0,1000]],10)#randomedge(n,[[0,1000],[0,1000],[0,10000]],10) for 3 d
 '''
 # print(random(v,e,10000)[1])
 print(twoopt(v,e,10)[1])
@@ -455,21 +460,32 @@ print(ACO(v,e,antnum,100,rou,q,initialPheromone,alpha,beta)[1])
 # print("GA")
 # print(geneticalgorithm(v,e,int(100000/n),n*10,1,64)[1])
 
-
-# print("ACO")
-# acoresults=[[0 for i in range(10)] for i in range(10)]
-# for i in range(2):
-#     for alpha in range(1,4):
-#         for beta in range(1,8):
-#             ACOresult=ACO(v,e,n,generationnum,rou,q,initialPheromone,alpha,beta)
-#             print(i,alpha,beta,ACOresult[1])
-#             acoresults[alpha][beta]+=ACOresult[1]
-# for b in range(1,8):
-#     for a in range(1,4):
-#         print("{:<8d}".format(int(acoresults[a][b])),end="")
-#     print()
+'''
+#adjust alpha and beta of ACO
+import matplotlib.pyplot as plt
+print("ACO, alpha=1~3, beta=1~9")
+acoresults=[[0 for i in range(10)] for i in range(10)]
+for alpha in range(1,4):
+    for beta in range(1,9):
+        rou=1/n#pheromone decrease every generation
+        q=n#amount of pheromone one ant have
+        initialPheromone=antnum*q/n/(n-1)
+        ACOresult=ACO(v,e,50,250,rou,q,initialPheromone,alpha,beta)
+        print(alpha,beta,ACOresult[1],ACOresult[2],"s")
+        acoresults[alpha][beta]=ACOresult
+for b in range(1,9):
+    plt.subplot(2,4,b)
+    for a in range(1,4):
+        print("{:<8d}".format(int(acoresults[a][b][1])),end="")
+        colors=["","r","g","b"]
+        plt.plot(acoresults[a][b][4],colors[a])
+    plt.title(f"b={b}")
+    print()
     
 '''
+
+'''
+relationship between parameter and run time
 t1=time()
 n=100
 print(n)
@@ -487,8 +503,9 @@ randomedge(n,2,[[0,1000],[0,1000]],10)
 ACO(v,e,10,10,0.1,10,1,1,1)
 t4=time()
 print(t2-t1,t3-t2,t4-t3)
-
 '''
+
+
 results=[]
 strings=["brute force", "greedy", "Prim", "Kruskal", "2-opt", "3-opt", "Genetic algorithm", "ACO"]
 print(strings[0])
@@ -504,16 +521,16 @@ print(strings[3])
 results.append(Kruskal(v,e))
 print(results[3][1],results[3][2],"s")
 print(strings[4])
-results.append(twoopt(v,e,int(12000/n)))
+results.append(twoopt(v,e,int(11000/n)))
 print(results[4][1],results[4][2],"s")
 print(strings[5])
 results.append(threeopt(v,e,int(20000/n**2)))
 print(results[5][1],results[5][2],"s")
 print(strings[6])
-results.append(geneticalgorithm(v,e,1000,500,1,64))
+results.append(geneticalgorithm(v,e,100,150*n,1,67))
 print(results[6][1],results[6][2],"s")
 print(strings[7])
-results.append(ACO(v,e,int(5000/n),200,rou,q,initialPheromone,alpha,beta))
+results.append(ACO(v,e,int(5000/n),250,rou,q,initialPheromone,alpha,beta))
 print(results[7][1],results[7][2],"s")
 
 
@@ -523,10 +540,18 @@ import numpy as np
 fig, axs = plt.subplots(nrows=3, ncols=3, constrained_layout=True)
 for i in range(3):
     for j in range(3):
+        
         plt.subplot(3,3,3*i+j+1)
-        plt.scatter(np.array([vx[0] for vx in v]),np.array([vy[1] for vy in v]),s=2,c='#000000')
         if i==2 and j==2:
             break
+        plt.scatter(np.array([vx[0] for vx in v]),np.array([vy[1] for vy in v]),s=2,c='#000000')
+        
         plt.plot(np.array([v[vx][0] for vx in results[3*i+j][0]]),np.array([v[vy][1] for vy in results[3*i+j][0]]))
         plt.title(strings[3*i+j])
-        plt.text(0,1050,str(round(results[3*i+j][1],6)))
+        plt.text(0,1.05*1000,str(round(results[3*i+j][1],6)))
+
+
+colors=["k-","","","","r-","y-","g-","b-"]
+for i in range(8):
+    print(i,len(results[i][3]),len(results[i][4]))
+    plt.plot(results[i][3],results[i][4],colors[i])
