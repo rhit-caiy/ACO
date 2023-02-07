@@ -3,21 +3,22 @@ from tkinter import Tk,Canvas
 from time import sleep,time
 
 import matplotlib.pyplot as plt
+#ACO2 for ACO animated display
 
 window=Tk()
 canvas=Canvas(window,bg="#FFFFFF",width=1440,height=810)
 window.title("ACO")
 
-n=64#vertex number
-antnum=n#number of ants in one generation, update pheromone every antnum ants
-generationnum=n*2#total ant generation number
+n=1024#vertex number
+antnum=int(10000/n)#number of ants in one generation, update pheromone every antnum ants
+generationnum=int(n**0.5)#total ant generation number, would be n*2 if no ant path optimization
 rou=1/n#pheromone decrease every generation
 q=n#amount of pheromone one ant have
 initialPheromone=antnum*q/n/(n-1)#initial concertration on paths, should >0 for random
 #pheromone attractivity
 alpha=1
 #distance attractivity
-beta=5
+beta=7
 
 def pheromonecolor(v,maxvalue):
     value=int((1-v/maxvalue)*255)
@@ -38,10 +39,11 @@ def draw(v,tau,bestpath,bestdistance,g):
     print("pheromone concertration range",round(maxpheromone,6),round(minpheromone,6))
     
     canvas.delete("all")
-    for i in range(n):
-        for j in range(n):
-            if i>j:
-                canvas.create_line(v[i][0],v[i][1],v[j][0],v[j][1],fill=pheromonecolor(tau[i][j],maxpheromone))
+    if n<200:
+        for i in range(n):
+            for j in range(n):
+                if i>j:
+                    canvas.create_line(v[i][0],v[i][1],v[j][0],v[j][1],fill=pheromonecolor(tau[i][j],maxpheromone))
     for i in range(n):
         vertex=v[i]
         canvas.create_oval(vertex[0]-2,vertex[1]-2,vertex[0]+2,vertex[1]+2,fill="#000000")
@@ -50,9 +52,10 @@ def draw(v,tau,bestpath,bestdistance,g):
     canvas.update()
     updatetext(g,antnum-1,bestdistance)
     color="#FF0000"
-    sleep(0.1)
-    for i in range(n):
-        canvas.create_line(v[bestpath[i]][0],v[bestpath[i]][1],v[bestpath[i+1]][0],v[bestpath[i+1]][1],fill=color)
+    sleep(0.2)
+    if g>-1:
+        for i in range(n):
+            canvas.create_line(v[bestpath[i]][0]-2,v[bestpath[i]][1]-2,v[bestpath[i+1]][0]-2,v[bestpath[i+1]][1]-2,fill=color)
     canvas.update()
     
 
@@ -71,7 +74,47 @@ def nextmove(available,v0,vtau,veta):
     else:
         return l[-1]
     
+def pathdistance(path):
+    d=0
+    for i in range(len(path)-1):
+        d+=e[path[i]][path[i+1]]
+    return d
+
+def pathtwoopt(oldpath):
+    path=oldpath.copy()
+    reduced=1
+    #usually takes several iterations
+    while reduced:
+        reduced=0
+        for i in range(n-2):
+            for j in range(2,n):
+                if j-i>1:
+                    d0=e[path[i]][path[i+1]]+e[path[j]][path[j+1]]
+                    d1=e[path[i]][path[j]]+e[path[i+1]][path[j+1]]
+                    if d1<d0:
+                        path=path[:i+1]+path[i+1:j+1][::-1]+path[j+1:]
+                        reduced+=1
+                        # print(reduced,"2-opt",c)
+    return path
+
+def moveonepoint(oldpath):
+    path=oldpath.copy()
+    #only iterate every combinations once
+    for i in range(1,n):
+        di=e[path[i-1]][path[i+1]]-e[path[i-1]][path[i]]-e[path[i]][path[i+1]]
+        for j in range(1,n):
+            if i-j<-1 or i-j>1:
+                dj=e[path[i]][path[j]]+e[path[i]][path[j+1]]-e[path[j]][path[j+1]]
+                if di+dj<0:
+                    if i>j:
+                        path.insert(j+1,path.pop(i))
+                    else:
+                        path.insert(j,path.pop(i))
+                    break
+    return path
+
 def start():
+    global v,e
     tstart=time()
     v=[]#vertices, first one would be the ant net
     
@@ -100,10 +143,11 @@ def start():
             if i!=j:
                 eta[i][j]=1/e[i][j]#1/d
     
-    bestdistance=n*10000
+    bestdistance=sum([max(i) for i in v])
     bestpath=[]
     generationbestdistances=[]
     bestdistances=[]
+    draw(v,tau,bestpath,bestdistance,-1)
     for g in range(generationnum):
         t=time()
         tauupdate=[[0 for i in range(n)] for j in range(n)]#update at the end of ant generation, track the total number
@@ -122,6 +166,11 @@ def start():
                 v0=v1
             path.append(0)
             d+=e[v0][0]
+            
+            #afterward optimization for each ant
+            path=moveonepoint(pathtwoopt(path))#
+            d=pathdistance(path)#
+            
             for i in range(n):
                 tauupdate[path[i]][path[i+1]]+=q/d
             if d<generationbestdistance:
@@ -153,8 +202,13 @@ def start():
     plt.grid()
     plt.show()
 
+running=0
 def click(coordinate):
-    start()
+    global running
+    if not running:
+        running=1
+        start()
+        running=0
     
 canvas.bind("<Button-1>",click)
 canvas.pack()

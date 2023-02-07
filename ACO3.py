@@ -1,7 +1,6 @@
 from random import randint,shuffle
 from time import time
-
-
+#ACO3 for multiple methods and show the curves
 
 def distance(a,b):
     return sum([(a[i]-b[i])**2 for i in range(len(a))])**0.5
@@ -12,14 +11,17 @@ def pathdistance(path):
         d+=e[path[i]][path[i+1]]
     return d
 
-def validpath(path):
-    if sorted(path)==[0]+[i for i in range(n)]:
-        print(True)
-    else:
-        print(False)
+# def validpath(path):
+#     if sorted(path)==[0]+[i for i in range(n)]:
+#         print(True)
+#     else:
+#         print(False)
 
 def weightedrandom(weights,num):
-    mul=10000/min(weights)#let minimum weight to be 10000
+    if min(weights):
+        mul=10000/min(weights)#let minimum weight to be 10000
+    else:
+        mul=1000000000000
     newweights=[i*mul for i in weights]
     result=[]
     total=int(sum(newweights))
@@ -36,8 +38,7 @@ def weightedrandom(weights,num):
             result.append(len(weights)-1)
     return result
         
-
-#input: number of vertex, range in those dimension as 2D array, minimum interval
+#input: number of vertex, range of dimensions in 2D array, minimum interval between any two vertices
 def randomedge(n,ranges,interval):
     global v,e,availablelist
     v=[]#vertices, first one would be the ant net
@@ -54,7 +55,7 @@ def randomedge(n,ranges,interval):
             if num==0:
                 break
         v.append(tuple(coordinate))
-    print(v)
+    #print(v)
     e=[[0 for i in range(n)] for j in range(n)]#edges
     for i in range(n):
         for j in range(n):
@@ -77,7 +78,6 @@ def ACO(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
                 eta[i][j]=1/e[i][j]#1/d
     tstart=time()
     for g in range(generationnum):
-        # t=time()
         tauupdate=[[0 for i in range(n)] for j in range(n)]#update at the end of ant generation, track the total number
         generationbestdistance=maxdistance
         generationbestpath=[]
@@ -112,8 +112,6 @@ def ACO(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
             bestdistance=generationbestdistance
             bestpath=generationbestpath
         times.append(time()-tstart)
-        # if g%100==0:
-        #     print(g,bestdistance)
     
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
@@ -127,7 +125,6 @@ def random(v,e,num):
     historydistance=[]
     tstart=time()
     for i in range(num):
-        # t0=time()
         path=availablelist.copy()
         shuffle(path)
         path.append(0)
@@ -137,8 +134,6 @@ def random(v,e,num):
             bestdistance=d
             bestpath=path
         historydistance.append(d)
-        
-        # t1=time()
         times.append(time()-tstart)
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
@@ -151,13 +146,13 @@ def twoopt(v,e,num):
     historydistance=[]
     tstart=time()
     for g in range(num):
-        # t0=time()
         path=availablelist.copy()
         shuffle(path)
         path.append(0)
         path.insert(0,0)
         d=pathdistance(path)
-        while 1:
+        reduced=1
+        while reduced:
             reduced=0
             for i in range(n-2):
                 for j in range(2,n):
@@ -168,20 +163,11 @@ def twoopt(v,e,num):
                             path=path[:i+1]+path[i+1:j+1][::-1]+path[j+1:]
                             d=pathdistance(path)
                             reduced=1
-                            break
-                if reduced:
-                    break
-                            
-            if not reduced:
-                break
         
         if d<bestdistance:
             bestdistance=d
             bestpath=path
         historydistance.append(d)
-        # print(d)
-        
-        # t1=time()
         times.append(time()-tstart)
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
@@ -194,13 +180,13 @@ def threeopt(v,e,num):
     historydistance=[]
     tstart=time()
     for g in range(num):
-        # t0=time()
         path=availablelist.copy()
         shuffle(path)
         path.append(0)
         path.insert(0,0)
         d=pathdistance(path)
-        while 1:
+        reduced=1
+        while reduced:
             reduced=0
             for i in range(n-4):
                 for j in range(2,n-2):
@@ -213,18 +199,10 @@ def threeopt(v,e,num):
                                 path=path[:i+1]+path[j+1:k+1]+path[i+1:j+1]+path[k+1:]
                                 d=pathdistance(path)
                                 reduced=1
-                                break
                             elif d2<d0:
                                 path=path[:i+1]+path[j+1:k+1][::-1]+path[i+1:j+1]+path[k+1:]
                                 d=pathdistance(path)
                                 reduced=1
-                                break
-                            
-                    if reduced:
-                        break
-                if reduced:
-                    break
-                            
             if not reduced:
                 break
         
@@ -232,9 +210,6 @@ def threeopt(v,e,num):
             bestdistance=d
             bestpath=path
         historydistance.append(d)
-        # print(g,d)
-        
-        # t1=time()
         times.append(time()-tstart)
     totaltime=time()-tstart
     return bestpath,bestdistance,totaltime,times,historydistance
@@ -391,27 +366,25 @@ def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
     historydistance=[]
     tstart=time()
     for g in range(generation):
-        # t0=time()
-        #selection
-        #index 0 is reserved for best
+        #selection, index 0 is reserved for best
         bestc=chromosomes[lengths.index(min(lengths))]
         nextgenerationindex=weightedrandom([(bestdistance/i)**selection for i in lengths],chromosomenum-1)
         chromosomes=[bestc]+[chromosomes[i] for i in nextgenerationindex]
-        #mutation, change 2 edge currently
+        #mutation, exchange 2 parts of chromosome
         for c in range(1,chromosomenum):
             for a in range(mutatenum):
-                i,j,k=sorted((randint(1,n),randint(1,n),randint(1,n)))
-                chromosomes[c]=chromosomes[c][:i]+chromosomes[c][j:k]+chromosomes[c][i:j]+chromosomes[c][k:]       
+                if randint(1,2)==1:
+                    i,j,k=sorted((randint(1,n),randint(1,n),randint(1,n)))
+                    chromosomes[c]=chromosomes[c][:i]+chromosomes[c][j:k]+chromosomes[c][i:j]+chromosomes[c][k:]
+                else:
+                    i,j=sorted((randint(1,n),randint(1,n)))
+                    chromosomes[c]=chromosomes[c][:i]+chromosomes[c][i:j][::-1]+chromosomes[c][j:]
             
         lengths=[pathdistance(c) for c in chromosomes]
         if min(lengths)<bestdistance:
             bestdistance=min(lengths)
             bestpath=chromosomes[lengths.index(bestdistance)]
-        # print(min(lengths))
         historydistance.append(min(lengths))
-        # print(chromosomes)
-        # if g%100==0:
-        #     print(g,bestdistance)
         times.append(time()-tstart)
         
     totaltime=time()-tstart
@@ -428,37 +401,10 @@ initialPheromone=antnum*q/n/(n-1)#initial concertration on paths, should >0 for 
 #pheromone attractivity
 alpha=1
 #distance attractivity
-beta=6
+beta=7
 
 randomedge(n,[[0,1000],[0,1000]],10)#randomedge(n,[[0,1000],[0,1000],[0,10000]],10) for 3 d
-'''
-# print(random(v,e,10000)[1])
-print(twoopt(v,e,10)[1])
-print(threeopt(v,e,2)[1])
-# print(greedy(v,e)[1])
-# print(Prim(v,e)[1])
-# print(Kruskal(v,e)[1])
-# print(geneticalgorithm(v,e,1000,1000,1,64)[1])
-# print()
-print(ACO(v,e,antnum,100,rou,q,initialPheromone,alpha,beta)[1])
-'''
-
-
-# print("brute force")
-# print(random(v,e,int(1000000/n))[1])
-# print("greedy")
-# print(greedy(v,e)[1])
-# print("Prim")
-# print(Prim(v,e)[1])
-# print("Kruskal")
-# print(Kruskal(v,e)[1])
-
-# print("2-opt")
-# print(twoopt(v,e,int(10000/n))[1])
-# print("3-opt")
-# print(threeopt(v,e,int(500/n))[1])
-# print("GA")
-# print(geneticalgorithm(v,e,int(100000/n),n*10,1,64)[1])
+print("vertex number",n)
 
 '''
 #adjust alpha and beta of ACO
@@ -481,7 +427,16 @@ for b in range(1,9):
         plt.plot(acoresults[a][b][4],colors[a])
     plt.title(f"b={b}")
     print()
-    
+'''
+
+'''
+#adjust rou
+import matplotlib.pyplot as plt
+for r in range(1,21,2):
+    l=ACO(v,e,50,250,r*rou,q,initialPheromone,alpha,beta)[1]
+    print(r,l)
+    plt.plot(r,l,"k.")
+plt.show()
 '''
 
 '''
@@ -506,10 +461,30 @@ print(t2-t1,t3-t2,t4-t3)
 '''
 
 
+
 results=[]
 strings=["brute force", "greedy", "Prim", "Kruskal", "2-opt", "3-opt", "Genetic algorithm", "ACO"]
+functions=[random,greedy,Prim,Kruskal,twoopt,threeopt,geneticalgorithm,ACO]
+#n=128
+inputs=[[1500000],#random
+        [],
+        [],
+        [],
+        [int(400000/n)],#2-opt
+        [int(550000/n**2)],#3-opt
+        [100,30000,1,67],#GA #60000 when n=512
+        [int(3000/n),1000,rou,q,initialPheromone,alpha,beta]#ACO
+        ]
+for i in range(len(functions)):
+    f=functions[i]
+    print(strings[i],[name for name in globals() if globals()[name] is f][0])
+    result=f(v,e,*inputs[i])
+    results.append(result)
+    print(result[1],result[2],"s")
+    
+'''
 print(strings[0])
-results.append(random(v,e,600000))
+results.append(random(v,e,1000000))
 print(results[0][1],results[0][2],"s")
 print(strings[1])
 results.append(greedy(v,e))
@@ -521,18 +496,18 @@ print(strings[3])
 results.append(Kruskal(v,e))
 print(results[3][1],results[3][2],"s")
 print(strings[4])
-results.append(twoopt(v,e,int(11000/n)))
+results.append(twoopt(v,e,int(10000/n)))
 print(results[4][1],results[4][2],"s")
 print(strings[5])
 results.append(threeopt(v,e,int(20000/n**2)))
 print(results[5][1],results[5][2],"s")
 print(strings[6])
-results.append(geneticalgorithm(v,e,100,150*n,1,67))
+results.append(geneticalgorithm(v,e,100,240*n,1,67))
 print(results[6][1],results[6][2],"s")
 print(strings[7])
-results.append(ACO(v,e,int(5000/n),250,rou,q,initialPheromone,alpha,beta))
+results.append(ACO(v,e,int(6000/n),600,rou,q,initialPheromone,alpha,beta))
 print(results[7][1],results[7][2],"s")
-
+'''
 
 import matplotlib.pyplot as plt
 import numpy as np

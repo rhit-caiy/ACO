@@ -1,0 +1,424 @@
+from random import randint,shuffle
+from time import time
+#ACO4 for adjust details on code implement and further improvements
+
+def distance(a,b):
+    return sum([(a[i]-b[i])**2 for i in range(len(a))])**0.5
+
+def pathdistance(path):
+    d=0
+    for i in range(len(path)-1):
+        d+=e[path[i]][path[i+1]]
+    return d
+
+# def validpath(path):
+#     if sorted(path)==[0]+[i for i in range(n)]:
+#         print(True)
+#     else:
+#         print(False)
+
+def weightedrandom(weights,num):
+    if min(weights):
+        mul=10000/min(weights)#let minimum weight to be 10000
+    else:
+        mul=1000000000000
+    newweights=[i*mul for i in weights]
+    result=[]
+    total=int(sum(newweights))
+    for i in range(num):
+        r=randint(0,total)
+        index=0
+        for weight in newweights:
+            r-=weight
+            if r<=0:
+                result.append(index)
+                break
+            index+=1
+        else:
+            result.append(len(weights)-1)
+    return result
+        
+#input: number of vertex, range of dimensions in 2D array, minimum interval between any two vertices
+def randomedge(n,ranges,interval):
+    global v,e,availablelist
+    v=[]#vertices, first one would be the ant net
+    for i in range(n):
+        while 1:
+            coordinate=[]
+            for i in range(len(ranges)):
+                coordinate.append(randint(ranges[i][0],ranges[i][1]))
+            num=0
+            for vertex in v:
+                if distance(coordinate,vertex)<interval:
+                    num=1#avoid two points too close
+                    break
+            if num==0:
+                break
+        v.append(tuple(coordinate))
+    print(v)
+    e=[[0 for i in range(n)] for j in range(n)]#edges
+    for i in range(n):
+        for j in range(n):
+            e[i][j]=sum([(v[i][d]-v[j][d])**2 for d in range(len(ranges))])**0.5
+    availablelist=[i for i in range(1,n)]
+
+#returns: best path, corresponding distance, totaltime, time for each round, solution of each round
+#O(n^2*antnum*generationnum)
+def ACO(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
+    times=[]
+    bestpath=[]
+    maxdistance=sum((max(i) for i in e))
+    bestdistance=maxdistance
+    historydistance=[]
+    tau=[[initialPheromone for i in range(n)] for j in range(n)]#pheromone
+    eta=[[0 for i in range(n)] for j in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if i!=j:
+                eta[i][j]=1/e[i][j]#1/d
+    tstart=time()
+    for g in range(generationnum):
+        tauupdate=[[0 for i in range(n)] for j in range(n)]#update at the end of ant generation, track the total number
+        generationbestdistance=maxdistance
+        generationbestpath=[]
+        for k in range(antnum):
+            d=0
+            path=[0]
+            available=availablelist.copy()
+            v0=0
+            for i in range(n-1):
+                p=[(tau[v0][i]**alpha*eta[v0][i]**beta) for i in available]
+                v1=available[weightedrandom(p,1)[0]]
+                available.remove(v1)
+                path.append(v1)
+                d+=e[v0][v1]
+                v0=v1
+            path.append(0)
+            d+=e[v0][0]
+            for i in range(n):
+                tauupdate[path[i]][path[i+1]]+=q/d
+            if d<generationbestdistance:
+                generationbestdistance=d
+                generationbestpath=path
+        #update pheromone
+        for i in range(n):
+            for j in range(n):
+                if i>j:
+                    tau[i][j]=tau[j][i]=(1-rou)*tau[i][j]+tauupdate[i][j]+tauupdate[j][i]
+            tau[i][i]=0
+            tau[i][i]=sum(tau[i])/(n-1)#remove diagonal
+        historydistance.append(generationbestdistance)
+        if generationbestdistance<bestdistance:
+            bestdistance=generationbestdistance
+            bestpath=generationbestpath
+        times.append(time()-tstart)
+    
+    totaltime=time()-tstart
+    return bestpath,bestdistance,totaltime,times,historydistance
+
+def ACO2(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
+    times=[]
+    bestpath=[]
+    maxdistance=sum((max(i) for i in e))
+    bestdistance=maxdistance
+    historydistance=[]
+    tau=[[initialPheromone for i in range(n)] for j in range(n)]#pheromone
+    eta=[[0 for i in range(n)] for j in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if i!=j:
+                eta[i][j]=1/e[i][j]#1/d
+    tstart=time()
+    for g in range(generationnum):
+        tauupdate=[[0 for i in range(n)] for j in range(n)]#update at the end of ant generation, track the total number
+        generationbestdistance=maxdistance
+        generationbestpath=[]
+        for k in range(antnum):
+            d=0
+            path=[0]
+            available=availablelist.copy()
+            v0=0
+            for i in range(n-1):
+                p=[(tau[v0][i]**alpha*eta[v0][i]**beta) for i in available]
+                v1=available[weightedrandom(p,1)[0]]
+                available.remove(v1)
+                path.append(v1)
+                d+=e[v0][v1]
+                v0=v1
+            path.append(0)
+            d+=e[v0][0]
+            for i in range(n):
+                tauupdate[path[i]][path[i+1]]+=q/d
+            if d<generationbestdistance:
+                generationbestdistance=d
+                generationbestpath=path
+        #update pheromone
+        for i in range(n):
+            for j in range(n):
+                if i>j:
+                    tau[i][j]=tau[j][i]=(1-rou)*tau[i][j]+tauupdate[i][j]+tauupdate[j][i]
+            tau[i][i]=0
+            tau[i][i]=sum(tau[i])/(n-1)#remove diagonal
+        historydistance.append(generationbestdistance)
+        generationbestpath=pathtwoopt(generationbestpath)#
+        generationbestdistance=pathdistance(generationbestpath)#
+        if generationbestdistance<bestdistance:
+            bestdistance=generationbestdistance
+            bestpath=generationbestpath
+        times.append(time()-tstart)
+    
+    totaltime=time()-tstart
+    return bestpath,bestdistance,totaltime,times,historydistance
+
+def ACO3(v,e,antnum,generationnum,rou,q,initialPheromone,alpha,beta):
+    times=[]
+    bestpath=[]
+    maxdistance=sum((max(i) for i in e))
+    bestdistance=maxdistance
+    historydistance=[]
+    tau=[[initialPheromone for i in range(n)] for j in range(n)]#pheromone
+    eta=[[0 for i in range(n)] for j in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if i!=j:
+                eta[i][j]=1/e[i][j]#1/d
+    tstart=time()
+    for g in range(generationnum):
+        tauupdate=[[0 for i in range(n)] for j in range(n)]#update at the end of ant generation, track the total number
+        generationbestdistance=maxdistance
+        generationbestpath=[]
+        for k in range(antnum):
+            d=0
+            path=[0]
+            available=availablelist.copy()
+            v0=0
+            for i in range(n-1):
+                p=[(tau[v0][i]**alpha*eta[v0][i]**beta) for i in available]
+                v1=available[weightedrandom(p,1)[0]]
+                available.remove(v1)
+                path.append(v1)
+                d+=e[v0][v1]
+                v0=v1
+            path.append(0)
+            d+=e[v0][0]
+            path=pathtwoopt(path)
+            d=pathdistance(path)
+            
+            for i in range(n):
+                tauupdate[path[i]][path[i+1]]+=q/d
+            if d<generationbestdistance:
+                generationbestdistance=d
+                generationbestpath=path
+        #update pheromone
+        for i in range(n):
+            for j in range(n):
+                if i>j:
+                    tau[i][j]=tau[j][i]=(1-rou)*tau[i][j]+tauupdate[i][j]+tauupdate[j][i]
+            tau[i][i]=0
+            tau[i][i]=sum(tau[i])/(n-1)#remove diagonal
+        historydistance.append(generationbestdistance)
+        if generationbestdistance<bestdistance:
+            bestdistance=generationbestdistance
+            bestpath=generationbestpath
+        times.append(time()-tstart)
+    
+    totaltime=time()-tstart
+    return bestpath,bestdistance,totaltime,times,historydistance
+
+#O(num*n^2)
+def twoopt(v,e,num):
+    times=[]
+    bestpath=[]
+    bestdistance=sum((max(i) for i in e))
+    historydistance=[]
+    tstart=time()
+    for g in range(num):
+        path=availablelist.copy()
+        shuffle(path)
+        path.append(0)
+        path.insert(0,0)
+        d=pathdistance(path)
+        reduced=1
+        while reduced:
+            reduced=0
+            for i in range(n-2):
+                for j in range(2,n):
+                    if j-i>1:
+                        d0=e[path[i]][path[i+1]]+e[path[j]][path[j+1]]
+                        d1=e[path[i]][path[j]]+e[path[i+1]][path[j+1]]
+                        if d1<d0:
+                            path=path[:i+1]+path[i+1:j+1][::-1]+path[j+1:]
+                            d=pathdistance(path)
+                            reduced=1
+                            
+            if not reduced:
+                break
+        if d<bestdistance:
+            bestdistance=d
+            bestpath=path
+        historydistance.append(d)
+        times.append(time()-tstart)
+    totaltime=time()-tstart
+    return bestpath,bestdistance,totaltime,times,historydistance
+
+def twoopt2(v,e,num):
+    times=[]
+    bestpath=[]
+    bestdistance=sum((max(i) for i in e))
+    historydistance=[]
+    tstart=time()
+    for g in range(num):
+        path=availablelist.copy()
+        shuffle(path)
+        path.append(0)
+        path.insert(0,0)
+        d=pathdistance(path)
+        reduced=1
+        while reduced:
+            reduced=0
+            for i in range(n-2):
+                for j in range(2,n):
+                    if j-i>1:
+                        d0=e[path[i]][path[i+1]]+e[path[j]][path[j+1]]
+                        d1=e[path[i]][path[j]]+e[path[i+1]][path[j+1]]
+                        if d1<d0:
+                            path=path[:i+1]+path[i+1:j+1][::-1]+path[j+1:]
+                            d=pathdistance(path)
+                            reduced=1
+                            
+            if not reduced:
+                break
+        path=moveonepoint(path)
+        d=pathdistance(path)
+        if d<bestdistance:
+            bestdistance=d
+            bestpath=path
+        historydistance.append(d)
+        times.append(time()-tstart)
+    totaltime=time()-tstart
+    return bestpath,bestdistance,totaltime,times,historydistance
+
+#O(num*n^3)
+def threeopt(v,e,num):
+    times=[]
+    bestpath=[]
+    bestdistance=sum((max(i) for i in e))
+    historydistance=[]
+    tstart=time()
+    for g in range(num):
+        path=availablelist.copy()
+        shuffle(path)
+        path.append(0)
+        path.insert(0,0)
+        d=pathdistance(path)
+        while 1:
+            reduced=0
+            for i in range(n-4):
+                for j in range(2,n-2):
+                    for k in range(4,n):
+                        if j-i>1 and k-j>1:
+                            d0=e[path[i]][path[i+1]]+e[path[j]][path[j+1]]+e[path[k]][path[k+1]]
+                            d1=e[path[i]][path[j+1]]+e[path[j]][path[k+1]]+e[path[k]][path[i+1]]
+                            d2=e[path[i]][path[k]]+e[path[i+1]][path[j+1]]+e[path[j]][path[k+1]]
+                            if d1<d0:
+                                path=path[:i+1]+path[j+1:k+1]+path[i+1:j+1]+path[k+1:]
+                                d=pathdistance(path)
+                                reduced=1
+                            elif d2<d0:
+                                path=path[:i+1]+path[j+1:k+1][::-1]+path[i+1:j+1]+path[k+1:]
+                                d=pathdistance(path)
+                                reduced=1
+            if not reduced:
+                break
+        
+        if d<bestdistance:
+            bestdistance=d
+            bestpath=path
+        historydistance.append(d)
+        times.append(time()-tstart)
+    totaltime=time()-tstart
+    return bestpath,bestdistance,totaltime,times,historydistance
+
+def pathtwoopt(oldpath):
+    path=oldpath.copy()
+    reduced=1
+    while reduced:
+        reduced=0
+        for i in range(n-2):
+            for j in range(2,n):
+                if j-i>1:
+                    d0=e[path[i]][path[i+1]]+e[path[j]][path[j+1]]
+                    d1=e[path[i]][path[j]]+e[path[i+1]][path[j+1]]
+                    if d1<d0:
+                        path=path[:i+1]+path[i+1:j+1][::-1]+path[j+1:]
+                        reduced=1
+    return path
+
+def moveonepoint(oldpath):
+    path=oldpath.copy()
+    reduced=1
+    while reduced:
+        reduced=0
+        for i in range(1,n):
+            di=e[path[i-1]][path[i+1]]-e[path[i-1]][path[i]]-e[path[i]][path[i+1]]
+            for j in range(1,n):
+                if i!=j:
+                    dj=e[path[i]][path[j]]+e[path[i]][path[j+1]]-e[path[j]][path[j+1]]
+                    if di+dj<0:
+                        reduced=0
+                        if i>j:
+                            vertex=path.pop(i)
+                            path.insert(j+1,vertex)
+                        else:
+                            vertex=path.pop(i)
+                            path.insert(j,vertex)
+                        break
+    return path
+
+n=64#vertex number
+antnum=n#number of ants in one generation, update pheromone every antnum ants
+generationnum=n*2#total ant generation number
+rou=1/n#pheromone decrease every generation
+q=n#amount of pheromone one ant have
+initialPheromone=antnum*q/n/(n-1)#initial concertration on paths, should >0 for random
+#pheromone attractivity
+alpha=1
+#distance attractivity
+beta=7
+
+randomedge(n,[[0,1000],[0,1000]],10)#randomedge(n,[[0,1000],[0,1000],[0,10000]],10) for 3 d
+
+
+# result=twoopt(v,e,5)#1 s n=512
+# print(pathdistance(result[0]))
+# t0=time()
+# print(pathdistance(moveonepoint(result[0])))
+# t1=time()
+# print(result[2],"s")
+# print(t1-t0,"s")
+# print()
+
+# result=threeopt(v,e,1)#4 min n=512
+# print(pathdistance(result[0]))
+# t0=time()
+# print(pathdistance(moveonepoint(result[0])))
+# t1=time()
+# print(result[2],"s")
+
+# print(t1-t0,"s")
+
+#n=64
+results=[]
+results.append(twoopt(v,e,5000))
+results.append(twoopt2(v,e,4200))
+results.append(ACO(v,e,50,600,rou,q,initialPheromone,alpha,beta))
+results.append(ACO2(v,e,50,580,rou,q,initialPheromone,alpha,beta))
+results.append(ACO3(v,e,50,140,rou,q,initialPheromone,alpha,beta))
+
+import matplotlib.pyplot as plt
+colors=["r","#FF00FF","g","#FF8000","b"]
+names=["2-opt","2-opt optimized","ACO","ACO with generation 2-opt","ACO with ant 2-opt"]
+#names=["2-opt","ACO","ACO with ant 2-opt"]
+for i in range(5):
+    print(names[i],results[i][1],results[i][2],"s")
+    plt.plot(results[i][3],results[i][4],colors[i])
