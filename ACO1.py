@@ -5,10 +5,10 @@ from itertools import permutations
 
 window=Tk()
 canvas=Canvas(window,bg="#FFFFFF",width=1440,height=810)
-window.title("ACO")
+window.title("ACO1")
 
-n=32
-antnum=10000
+n=64
+antnum=1000
 
 def getrandomindex(availablepoints,information):
     weights=[]
@@ -67,7 +67,7 @@ def pathlength(path,distances):
 
 def start():
     print()
-    permutationnum=5
+    permutationnum=4
     
     
     

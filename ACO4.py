@@ -64,7 +64,7 @@ def randomedge(n,ranges,interval):
 
 #returns: best path, corresponding distance, totaltime, time for each round, solution of each round
 #O(n^2*antnum*generationnum)
-def ACO(v,e,timelimit,antnum,generationnum,rou,q,initialPheromone,alpha,beta,antwiseoptimize,generationwiseoptimize):
+def ACO(v,e,timelimit,antnum,generationnum,rou,q,initialPheromone,alpha,beta,antwiseopt,generationwiseopt):
     times=[]
     bestpath=[]
     maxdistance=sum((max(i) for i in e))
@@ -95,7 +95,7 @@ def ACO(v,e,timelimit,antnum,generationnum,rou,q,initialPheromone,alpha,beta,ant
                 v0=v1
             path.append(0)
             d+=e[v0][0]
-            if antwiseoptimize:
+            if antwiseopt:
                 path=moveonepoint(pathtwoopt(path))
                 d=pathdistance(path)
             
@@ -112,7 +112,7 @@ def ACO(v,e,timelimit,antnum,generationnum,rou,q,initialPheromone,alpha,beta,ant
             tau[i][i]=0
             tau[i][i]=sum(tau[i])/(n-1)#remove diagonal
         historydistance.append(generationbestdistance)
-        if generationwiseoptimize:
+        if generationwiseopt:
             generationbestpath=moveonepoint(pathtwoopt(path))
             generationbestdistance=pathdistance(generationbestpath)
         if generationbestdistance<bestdistance:
@@ -292,8 +292,9 @@ def moveonepoint(oldpath):
                         break
     return path
 
-n=1024#vertex number
+n=4096#vertex number
 antnum=int(10000/n)#number of ants in one generation, update pheromone every antnum ants
+antnum=5
 generationnum=int(n**0.5)#total ant generation number
 rou=1/n#pheromone decrease every generation
 q=n#amount of pheromone one ant have
@@ -303,7 +304,7 @@ alpha=1
 #distance attractivity
 beta=7
 
-randomedge(n,[[0,10000],[0,10000]],10)#randomedge(n,[[0,1000],[0,1000],[0,10000]],10) for 3 d
+randomedge(n,[[0,10000],[0,10000]],10)#randomedge(n,[[0,1000],[0,1000],[0,1000]],10) for 3 dimensions
 
 
 # result=twoopt(v,e,5)#1 s n=512
@@ -312,38 +313,43 @@ randomedge(n,[[0,10000],[0,10000]],10)#randomedge(n,[[0,1000],[0,1000],[0,10000]
 infinity=10**10#arbitrary large number to hit time limit
 
 functions=[twoopt]*2+[geneticalgorithm]+[ACO]*3
-inputs=[[infinity,0],
-        [infinity,1],
-        [50,infinity,1,n],
-        [antnum,infinity,rou,q,initialPheromone,alpha,beta,0,0],
-        [antnum,infinity,rou,q,initialPheromone,alpha,beta,0,1],
-        [antnum,infinity,rou,q,initialPheromone,alpha,beta,1,0]]
+inputs=[[infinity,0],#0
+        [infinity,1],#1
+        [10,infinity,1,n],#2
+        [antnum,infinity,rou,q,initialPheromone,alpha,beta,0,0],#3
+        [antnum,infinity,rou,q,initialPheromone,alpha,beta,0,1],#4
+        [antnum,infinity,rou,q,initialPheromone,alpha,beta,1,0]#5
+        ]
 names=["2-opt",
-       "2-opt optimized",
+       "2-opt opt",
        "genetic algorithm",
        "ACO",
-       "ACO with generation wise optimize",
-       "ACO with ant-wise optimize"]
+       "ACO generation-wise opt",
+       "ACO ant-wise opt"]
 colors=["r",
         "#FF8000",
         "g",
         "b",
         "#8000FF",
         "#FF00FF"]
+run=[1,2,3,5]
+
+# functions=[]
+# inputs=[]
+# names=[]
+# run=[]
+
 
 results=[]
-timelimit=100
-run=[0,1,2,3,4,5]
+timelimit=600
+
 print(f"n = {n}, time limit = {timelimit}s")
 print("{:<40}{:<20}{:<16}{:<10}".format("algorithm","distance","time/s","generation"))
 for i in run:
     result=functions[i](v,e,timelimit,*inputs[i])
     print("{:<40}{:<20f}{:<16f}{:<10}".format(names[i],result[1],result[2],result[5]))
     results.append(result)
-print()
 
 import matplotlib.pyplot as plt
-
-
-for i in run:
+for i in range(len(results)):
     plt.plot(results[i][3],results[i][4],colors[i])
