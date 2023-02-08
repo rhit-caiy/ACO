@@ -392,7 +392,7 @@ def geneticalgorithm(v,e,chromosomenum,generation,mutatenum,selection):
     return bestpath,bestdistance,totaltime,times,historydistance
 
 
-n=128#vertex number
+n=256#vertex number
 antnum=n#number of ants in one generation, update pheromone every antnum ants
 generationnum=n*2#total ant generation number
 rou=1/n#pheromone decrease every generation
@@ -409,7 +409,7 @@ print("vertex number",n)
 '''
 #adjust alpha and beta of ACO
 import matplotlib.pyplot as plt
-print("ACO, alpha=1~3, beta=1~9")
+print("ACO, alpha=1~3, beta=1~8")
 acoresults=[[0 for i in range(10)] for i in range(10)]
 for alpha in range(1,4):
     for beta in range(1,9):
